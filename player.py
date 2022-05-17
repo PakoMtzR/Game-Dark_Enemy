@@ -37,18 +37,18 @@ class Player:
         self.pos_x += self.vel_x
         self.pos_y += self.vel_y
 
-        """ 
+        
         # Jugador Encarcelado
-        if self.pos_x <= 0:
-            self.pos_x = 1
-        if self.pos_x >= (width - self.size):
-            self.pos_x = (width - self.size) - 1
-        if self.pos_y <= 0:
-            self.pos_y = 1
-        if self.pos_y >= (height - self.size):
-            self.pos_y = (height - self.size) - 1
-        """
+        if self.pos_x < 0:
+            self.pos_x = 0
+        if self.pos_x > (width - self.size):
+            self.pos_x = (width - self.size)
+        if self.pos_y < 0:
+            self.pos_y = 0
+        if self.pos_y > (height - self.size):
+            self.pos_y = (height - self.size)
 
+        """
         # Teletransportar jugador
         if self.pos_x <= 0:
             self.pos_x = (width - self.size) - 1
@@ -58,6 +58,7 @@ class Player:
             self.pos_y = (height - self.size) - 1
         if self.pos_y >= (height - self.size):
             self.pos_y = 1
+        """
         
         # self.rect = pygame.Rect(int(self.pos_x), int(self.pos_y), self.size, self.size)
         self.rect = Rect(int(self.pos_x), int(self.pos_y), self.size, self.size)
