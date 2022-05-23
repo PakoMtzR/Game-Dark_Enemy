@@ -22,6 +22,7 @@ stars = _stars.Stars(60, WIDTH, HEIGHT)
 laser_sound = pygame.mixer.Sound("sounds/laser_sound1.ogg")
 laser_list = []
 
+max_lasers = 2
 # Juego
 while True:
 
@@ -43,11 +44,12 @@ while True:
             if event.key == pygame.K_s:
                 player.down_pressed = True
             if event.key == pygame.K_SPACE:
-                laser = _laser.Laser()
-                laser.pos_x = player.pos_x + player.size/2 - laser.size_x/2
-                laser.pos_y = player.pos_y
-                laser_list.append(laser)
-                laser_sound.play()
+                if len(laser_list) < max_lasers:
+                    laser = _laser.Laser()
+                    laser.pos_x = player.pos_x + player.size/2 - laser.size_x/2
+                    laser.pos_y = player.pos_y
+                    laser_list.append(laser)
+                    laser_sound.play()
 
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_a:

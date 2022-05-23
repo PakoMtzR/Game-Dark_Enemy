@@ -5,7 +5,7 @@ class Laser():
     def __init__(self):
         self.size_x = 10
         self.size_y = 30
-        self.color = (0, 225, 0)
+        self.color =  (0, 225, 0)   #(239, 83, 80)
         self.speed = 9
         self.pos_x = 0
         self.pos_y = 0
