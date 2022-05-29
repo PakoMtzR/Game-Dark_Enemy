@@ -4,8 +4,8 @@ HEADER = 64 # bits
 PORT = 5050
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
-SERVER = "192.000.00.0"
-#SERVER = socket.gethostbyname(socket.gethostname()) # <-- Automatico
+#SERVER = "192.000.00.0"
+SERVER = socket.gethostbyname(socket.gethostname()) # <-- Automatico
 ADDRESS = (SERVER, PORT)
 
 

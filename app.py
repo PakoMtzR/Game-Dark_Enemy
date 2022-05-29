@@ -22,7 +22,7 @@ stars = _stars.Stars(60, WIDTH, HEIGHT)
 laser_sound = pygame.mixer.Sound("sounds/laser_sound1.ogg")
 laser_list = []
 
-max_lasers = 2
+max_lasers = 3
 # Juego
 while True:
 
