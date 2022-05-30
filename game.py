@@ -11,14 +11,6 @@ TITLE = "Dark Enemy (The Game)"
 FPS = 80
 # ------------------------------------------------------- #
 
-# Configuracion Inicial
-# ------------------------------------------------------- #
-pygame.init()
-SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption(TITLE)
-clock = pygame.time.Clock()
-# ------------------------------------------------------- #
-
 # Lista de Colores
 # ------------------------------------------------------- #
 BLACK = (25, 25, 25)
@@ -26,10 +18,32 @@ ORANGE = (250, 120, 60)
 GRAY = (101, 101, 101)
 GREEN = (0, 225, 0)
 RED = (239, 83, 80)
+WHITE = (225, 225, 225)
 # ------------------------------------------------------- #
 
-# Generando mapa de estrellas
+# Configuracion Inicial
 # ------------------------------------------------------- #
+pygame.init()
+SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
+SCREEN.fill(BLACK)
+pygame.display.set_caption(TITLE)
+clock = pygame.time.Clock()
+# ------------------------------------------------------- #
+
+# Cargar Elementos Audiovisuales
+# ------------------------------------------------------- #
+# Cargando sonidos...
+laser_sound = pygame.mixer.Sound("sounds/laser_sound1.ogg")
+laser_hit_sound = pygame.mixer.Sound("sounds/laser_hit.ogg")
+explosion_sound = pygame.mixer.Sound("sounds/explosion.ogg")
+
+# Animacion Explosion
+explosion_group = pygame.sprite.Group()
+# ------------------------------------------------------- #
+
+# Background - Mapa de Estrellas - Marcador de vidas 
+# ------------------------------------------------------- #
+# Generando mapa de estrellas
 stars_list = []
 num_stars = 60
 star_radio = 2
@@ -39,7 +53,40 @@ for star in range(num_stars):
     pos_y = randint(0, HEIGHT)
     stars_list.append([pos_x, pos_y])
 
-def draw_background():  # Dibuja las estrellas en la pantalla
+# Funcion para dibujar texto en la pantalla
+def draw_text(surface, text, size, pos_x, pos_y, color):
+    font = pygame.font.SysFont("serif", size)
+    text_surface = font.render(text, True, color)
+    text_rect = text_surface.get_rect()
+    text_rect.midtop = (pos_x, pos_y)
+    surface.blit(text_surface, text_rect)
+
+# Pantalla de inicio
+def show_go_screen(msg):
+    if msg == "intro":
+        draw_text(SCREEN, "Dark Enemy >:D", 60, WIDTH//2, HEIGHT//4, WHITE)
+    if msg == "win":
+        draw_text(SCREEN, "YOU WON!", 60, WIDTH//2, HEIGHT//4, GREEN)
+    if msg == "lost":
+        draw_text(SCREEN, "YOU LOST!", 60, WIDTH//2, HEIGHT//4, RED)    
+    
+    draw_text(SCREEN, "Press R for a New Match", 30, WIDTH//2, HEIGHT//2, WHITE)
+
+    pygame.display.flip()
+    waiting = True
+    run_game = True
+    while waiting:
+        clock.tick(FPS)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return not run_game
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:
+                    waiting = False
+                    return run_game
+
+# Background
+def draw_background(player):  # Dibuja las estrellas en la pantalla
     SCREEN.fill(BLACK)
     for star in stars_list:
         pygame.draw.circle(SCREEN, GRAY, star, star_radio)
@@ -48,6 +95,9 @@ def draw_background():  # Dibuja las estrellas en la pantalla
 
         if star[0] > WIDTH: star[0] = 0
         if star[1] > HEIGHT: star[1] = 0 
+
+    # Dibuja las vidas que tiene el jugador
+    draw_text(SCREEN, "Health: " + str(player.health), 30, 60, 5, WHITE)
 # ------------------------------------------------------- #
 
 # Programacion del Jugador
@@ -68,6 +118,9 @@ class Player:
         self.down_pressed = False
         self.speed = 4
     
+    def __del__(self):
+        print("jugador eliminado")
+
     def draw_player(self):
         pygame.draw.rect(SCREEN, self.color, self.rect)
     
@@ -104,9 +157,39 @@ class Player:
         self.rect = pygame.Rect(int(self.pos_x), int(self.pos_y), self.size, self.size)
 # ------------------------------------------------------- #
 
+# Programacion de la explosion
+# ------------------------------------------------------- #
+class Explosion(pygame.sprite.Sprite):
+	def __init__(self, pos_x, pos_y, scale):
+		pygame.sprite.Sprite.__init__(self)
+		self.images = []
+		for num in range(1,6):
+			img = pygame.image.load(f"img/exp{num}.png")
+			img = pygame.transform.scale(img, (scale, scale))
+			self.images.append(img)
+		self.index = 0
+		self.image = self.images[self.index]
+		self.rect = self.image.get_rect()
+		self.rect.center = [pos_x, pos_y]
+		self.counter = 0
+
+	def update(self):
+		explosion_speed = 4
+		#update explosion animation
+		self.counter += 1
+
+		if self.counter >= explosion_speed and self.index < len(self.images) - 1:
+			self.counter = 0
+			self.index += 1
+			self.image = self.images[self.index]
+
+		#if the animation is complete, reset animation index
+		if self.index >= len(self.images) - 1 and self.counter >= explosion_speed:
+			self.kill()
+# ------------------------------------------------------- #
+
 # Programacion de los Laseres
 # ------------------------------------------------------- #
-laser_sound = pygame.mixer.Sound("sounds/laser_sound1.ogg")
 my_lasers = []
 enemy_lasers = []
 max_lasers = 3
@@ -117,16 +200,18 @@ class Laser():
         self.size_y = 30
         self.color = GREEN
         self.speed = 9
+        self.direction = -1     # (-1 se mueve de abajo-arriba) (1 de arriba-abajo)
         self.pos_x = 0
         self.pos_y = 0
         self.rect = pygame.Rect(self.pos_x, self.pos_y, self.size_x, self.size_y)
-    
+        # laser_sound.play()
+
     def update_position(self):
-        self.pos_y -= self.speed
+        self.pos_y += self.speed * self.direction
         self.rect = pygame.Rect(int(self.pos_x), int(self.pos_y), self.size_x, self.size_y)
 
 
-def draw_lasers(player):
+def draw_lasers(player:object):
 
     # Laseres del jugador
     for laser in my_lasers:
@@ -137,39 +222,73 @@ def draw_lasers(player):
         # y se elimina el laser de la lista
         if laser.pos_y < -laser.size_y:
             # SEND POSITION LASER TO SERVER
-            print('pos_x:', laser.pos_x)
+            laser_pos_x_send = WIDTH - laser.pos_x - laser.size_x
+            print('pos_x:', laser.pos_x, 'sending ->', laser_pos_x_send)
+            # ------------------------- Temporal -------------------------
+            laser_enemy = Laser()
+            laser_enemy.pos_x = laser_pos_x_send
+            laser_enemy.pos_y = 0
+            enemy_lasers.append(laser_enemy)
+            # ------------------------- Temporal -------------------------
             my_lasers.remove(laser)
     
     # Laseres del enemigo
     for laser in enemy_lasers:
-        laser.speed *= -1       # Los laseres se mueven de arriba-abajo
+        laser.direction = 1     # Los laseres se mueven de arriba-abajo
         laser.color = RED       # Cambiamos el color del laser a rojo para diferenciarlos de los nuestros
         laser.update_position()
         pygame.draw.rect(SCREEN, laser.color, laser.rect)
 
         # Si el laser choca con el jugador, pierde una vida y eliminamos el laser de la lista
-        if ((laser.pos_y + laser.size_y >= player.pox_y) and (laser.pos_y + laser.size_y <= player.pos_y + player.size)) and ((laser.pos_x >= player.pos_x) and (laser.pos_x - laser.size_x <= player.pos_x + player.size)):
-            player.health -= 1
-            enemy_lasers.remove(laser)
-            print(player.health)
+        if ((laser.pos_y + laser.size_y >= player.pos_y) and (laser.pos_y + laser.size_y <= player.pos_y + player.size)) and ((laser.pos_x >= player.pos_x) and (laser.pos_x - laser.size_x <= player.pos_x + player.size)):
+            
+            player.health -= 1  # Bajar vida
+
+            # Animacion de explosion
+            if player.health > 0:
+                laser_hit_sound.play()
+                explosion = Explosion(player.pos_x + player.size//2, player.pos_y, 50)
+                explosion_group.add(explosion)
+            else:
+                explosion_sound.play()
+                explosion = Explosion(player.pos_x + player.size//2, player.pos_y, 300)
+                explosion_group.add(explosion)
+
+            enemy_lasers.remove(laser)  # Remover laser enemigo de memoria
+            # print('Health:', player.health)
 
         # Si el laser sale de la pantalla, se elimina de la lista
         if laser.pos_y > HEIGHT:
-            #print('pos_x:', laser.pos_x)
             enemy_lasers.remove(laser)
-
 # ------------------------------------------------------- #
 
 
 # --------------------------------------------------------------------------------- #    
 # Juego
 def main_game():
-    player = Player(ORANGE)
     
+    game_over = True
     run_game = True
-    while run_game:   
-        
-        clock.tick(FPS)
+    player = Player(ORANGE)
+    show = "intro"
+    
+
+    while run_game:
+        if game_over:
+            game_over = False
+
+            # Limpiamos los elementos del juego
+            del player
+            player = Player(ORANGE)
+            my_lasers.clear()
+            enemy_lasers.clear()
+
+            if show == "lost":
+                run_game = show_go_screen("lost")
+            if show == "win":
+                run_game = show_go_screen("win")
+            if show == "intro":
+                run_game = show_go_screen("intro")
 
         # Eventos
         for event in pygame.event.get():
@@ -177,7 +296,7 @@ def main_game():
             if event.type == pygame.QUIT:
                 run_game = False
             
-            # Eventos de Teclado, movimiento del jugador
+            # Eventos de Teclado, movimiento del jugador y disparos
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_a:
                     player.left_pressed = True
@@ -205,13 +324,21 @@ def main_game():
                 if event.key == pygame.K_s:
                     player.down_pressed = False
         
+        # Si el jugador pierde todas sus vidas, se termina el juego
+        if player.health == 0:
+            game_over = True
+            show = "lost"
+
         # Actualiza la pantalla (Dibuja todos los elementos del juego)
-        draw_background()
+        draw_background(player)
         draw_lasers(player)
-        player.draw_player()
         player.update_position()
+        player.draw_player()
+        explosion_group.draw(SCREEN)
+        explosion_group.update()
         pygame.display.flip()
-        
+        clock.tick(FPS)
+
     pygame.quit()   # Cerrar Juego
 
 
