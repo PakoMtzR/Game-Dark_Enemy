@@ -2,6 +2,7 @@
 # ------------------------------------------------------- #
 import pygame
 from random import randint
+from pyvideoplayer import Video
 # ------------------------------------------------------- #
 
 # Constantes
@@ -36,6 +37,10 @@ clock = pygame.time.Clock()
 laser_sound = pygame.mixer.Sound("sounds/laser_sound1.ogg")
 laser_hit_sound = pygame.mixer.Sound("sounds/laser_hit.ogg")
 explosion_sound = pygame.mixer.Sound("sounds/explosion.ogg")
+
+# Cargando video de la intro
+video = Video("video/intro.mp4")
+video.set_size((WIDTH, HEIGHT))
 
 # Animacion Explosion
 explosion_group = pygame.sprite.Group()
@@ -262,6 +267,16 @@ def draw_lasers(player:object):
             enemy_lasers.remove(laser)
 # ------------------------------------------------------- #
 
+# --------------------------------------------------------------------------------- #    
+# Intro
+def intro():
+    while True:
+        video.draw(SCREEN, (0, 0))
+        pygame.display.update()
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEBOTTONDOWN:
+                video.close()
+                main_game()
 
 # --------------------------------------------------------------------------------- #    
 # Juego
@@ -343,4 +358,4 @@ def main_game():
 
 
 if __name__ == "__main__":
-    main_game()
+    intro()
