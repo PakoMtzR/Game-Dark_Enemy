@@ -40,7 +40,7 @@ explosion_sound = pygame.mixer.Sound("sounds/explosion.ogg")
 
 # Cargando video de la intro
 video = Video("video/intro.mp4")
-video.set_size((WIDTH, HEIGHT))
+video.set_size((WIDTH + 10, HEIGHT + 10))
 
 # Animacion Explosion
 explosion_group = pygame.sprite.Group()
@@ -270,13 +270,20 @@ def draw_lasers(player:object):
 # --------------------------------------------------------------------------------- #    
 # Intro
 def intro():
-    while True:
+    run_intro = True
+
+    while run_intro:
         video.draw(SCREEN, (0, 0))
         pygame.display.update()
         for event in pygame.event.get():
-            if event.type == pygame.MOUSEBOTTONDOWN:
+            if event.type == pygame.MOUSEBUTTONDOWN:
                 video.close()
                 main_game()
+
+            if event.type == pygame.QUIT:
+                run_intro = False
+        
+    pygame.quit()   # Cerrar Juego            
 
 # --------------------------------------------------------------------------------- #    
 # Juego
