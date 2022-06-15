@@ -3,6 +3,7 @@
 import pygame
 from random import randint
 from pyvideoplayer import Video
+from network import Network
 # ------------------------------------------------------- #
 
 # Constantes
@@ -40,7 +41,7 @@ explosion_sound = pygame.mixer.Sound("sounds/explosion.ogg")
 
 # Cargando video de la intro
 video = Video("video/intro.mp4")
-video.set_size((WIDTH + 10, HEIGHT + 10))
+video.set_size((WIDTH, HEIGHT))
 
 # Animacion Explosion
 explosion_group = pygame.sprite.Group()
@@ -216,7 +217,7 @@ class Laser():
         self.rect = pygame.Rect(int(self.pos_x), int(self.pos_y), self.size_x, self.size_y)
 
 
-def draw_lasers(player:object):
+def draw_lasers(player:object, network:object):
 
     # Laseres del jugador
     for laser in my_lasers:
@@ -228,12 +229,14 @@ def draw_lasers(player:object):
         if laser.pos_y < -laser.size_y:
             # SEND POSITION LASER TO SERVER
             laser_pos_x_send = WIDTH - laser.pos_x - laser.size_x
-            print('pos_x:', laser.pos_x, 'sending ->', laser_pos_x_send)
             # ------------------------- Temporal -------------------------
-            laser_enemy = Laser()
-            laser_enemy.pos_x = laser_pos_x_send
-            laser_enemy.pos_y = 0
-            enemy_lasers.append(laser_enemy)
+            network.send(str(int(laser_pos_x_send)))
+
+            # print('pos_x:', laser.pos_x, 'sending ->', laser_pos_x_send)
+            #laser_enemy = Laser()
+            #laser_enemy.pos_x = laser_pos_x_send
+            #laser_enemy.pos_y = 0
+            #enemy_lasers.append(laser_enemy)
             # ------------------------- Temporal -------------------------
             my_lasers.remove(laser)
     
@@ -288,7 +291,8 @@ def intro():
 # --------------------------------------------------------------------------------- #    
 # Juego
 def main_game():
-    
+    network = Network()
+
     game_over = True
     run_game = True
     player = Player(ORANGE)
@@ -350,10 +354,28 @@ def main_game():
         if player.health == 0:
             game_over = True
             show = "lost"
+            network.send("dead")
 
         # Actualiza la pantalla (Dibuja todos los elementos del juego)
         draw_background(player)
-        draw_lasers(player)
+
+        status = network.update()
+
+        # Si gana se acaba el juego
+        if status[0] == "win":
+            game_over = True
+            show = "win"
+        else:
+            new_laser_pos_x = int(status[1])
+            if new_laser_pos_x < -1:
+                pass
+            else:
+                laser_enemy = Laser()
+                laser_enemy.pos_x = new_laser_pos_x
+                laser_enemy.pos_y = 0
+                enemy_lasers.append(laser_enemy)
+
+        draw_lasers(player, network)
         player.update_position()
         player.draw_player()
         explosion_group.draw(SCREEN)
